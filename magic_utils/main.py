@@ -3,7 +3,7 @@ from typing import cast
 import discord
 
 from client import client
-from discord_token import TOKEN
+from env import TOKEN
 from mtg import COMMANDS, CardInfo, ValidCommandName
 
 
