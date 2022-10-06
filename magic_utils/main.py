@@ -1,12 +1,8 @@
 import discord
 
+from client import client
 from discord_token import TOKEN
 from mtg import COMMANDS, CardInfo, ValidCommandName
-
-intents = discord.Intents.default()
-intents.message_content = True
-
-client = discord.Client(intents=intents)
 
 
 @client.event
