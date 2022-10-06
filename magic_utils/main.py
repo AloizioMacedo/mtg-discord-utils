@@ -31,8 +31,13 @@ async def on_message(message: discord.Message):
             await message.channel.send("This command is not valid.")
             raise ValueError
 
+        if len(message_tuple) == 2:
+            rest_of_command = message_tuple[1].strip()
+        else:
+            rest_of_command = ""
+
         result = await COMMANDS[command].process_command(
-            message, message_tuple[1].strip()
+            message, rest_of_command
         )
 
         if not result:
