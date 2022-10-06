@@ -2,8 +2,8 @@ from typing import cast
 
 import discord
 
+from _env import TOKEN
 from client import client
-from env import TOKEN
 from mtg import COMMANDS, CardInfo, ValidCommandName
 
 
