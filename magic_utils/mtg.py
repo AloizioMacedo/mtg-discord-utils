@@ -103,10 +103,10 @@ class GetRulings(CommandStrategy):
             response = await session.get(
                 f'{SCRYFALL_URL}/cards/named?fuzzy="{card_name}"'
             )
-            if response.status != 200:
-                raise ValueError
-            elif response.status == 404:
+            if response.status == 404:
                 await message.channel.send("Card not found.")
+                raise ValueError
+            elif response.status != 200:
                 raise ValueError
 
             card = await response.json()
@@ -116,10 +116,10 @@ class GetRulings(CommandStrategy):
             response = await session.get(
                 f"{SCRYFALL_URL}/cards/{card_id}/rulings"
             )
-            if response.status != 200:
-                raise ValueError
-            elif response.status == 404:
+            if response.status == 404:
                 await message.channel.send("Ruling not found.")
+                raise ValueError
+            elif response.status != 200:
                 raise ValueError
 
             json = await response.json()
