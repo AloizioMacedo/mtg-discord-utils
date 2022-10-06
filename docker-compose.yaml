@@ -4,6 +4,8 @@ services:
   discord-bot:
     build:
       context: .
+    environment:
+      POSTGRES_SERVICE: db-users:5432
 
   db-users:
     image: postgres:14.5-alpine
