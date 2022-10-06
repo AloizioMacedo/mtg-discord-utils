@@ -292,7 +292,9 @@ class SearchDeck(CommandStrategy):
             cards: list[dict] = result.deck["deck"]  # type: ignore
 
         query_results = [
-            card for card in cards if text_query in card["oracle_text"].lower()
+            card
+            for card in cards
+            if text_query in card.get("oracle_text", "").lower()
         ]
 
         return [
