@@ -2,14 +2,17 @@ import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
+from typing import Union
 
 import aiohttp
+import discord
 
 SCRYFALL_URL = "https://api.scryfall.com"
 
 
 class ValidCommandName(Enum):
     find_dual = "find_dual"
+    get_rulings = "get_rulings"
 
 
 # forest, island, mountain, plains, swamp
@@ -36,16 +39,20 @@ class CardInfo:
 
 
 class CommandStrategy(ABC):
+    """"""
+
     @abstractmethod
     async def process_command(
-        self, rest_of_command: list[str]
-    ) -> list[CardInfo]:
+        self, message: discord.Message, rest_of_command: list[str]
+    ) -> Union[list[CardInfo], list[str]]:
         ...
 
 
 class FindDualLand(CommandStrategy):
+    """"""
+
     async def process_command(
-        self, rest_of_command: list[str]
+        self, message: discord.Message, rest_of_command: list[str]
     ) -> list[CardInfo]:
         types = tuple(sorted([x.lower() for x in rest_of_command]))
 
@@ -82,6 +89,50 @@ class FindDualLand(CommandStrategy):
             return []
 
 
+class GetRulings(CommandStrategy):
+    """"""
+
+    async def process_command(
+        self, message: discord.Message, rest_of_command: list[str]
+    ) -> list[str]:
+        card_name = " ".join(rest_of_command).lower().strip()
+
+        rulings: list[str] = []
+        rulings.append(f"Rulings for {card_name}:")
+
+        async with aiohttp.ClientSession() as session:
+            response = await session.get(
+                f'{SCRYFALL_URL}/cards/named?exact="{card_name}"'
+            )
+            if response.status != 200:
+                raise ValueError
+            elif response.status == 404:
+                await message.channel.send("Card not found.")
+                raise ValueError
+
+            card = await response.json()
+            card_id = card["id"]
+
+            response = await session.get(
+                f"{SCRYFALL_URL}/cards/{card_id}/rulings"
+            )
+            if response.status != 200:
+                raise ValueError
+            elif response.status == 404:
+                await message.channel.send("Ruling not found.")
+                raise ValueError
+
+            json = await response.json()
+            data: list[dict[str, str]] = json["data"]
+            for i, entry in enumerate(data):
+                rulings.append(
+                    f"{i+1}. Ruling published at {entry['published_at']}:"
+                    f" {entry['comment']}"
+                )
+
+        return rulings
+
+
 async def _get_dual(
     types: tuple[str, str], session: aiohttp.ClientSession
 ) -> CardInfo:
@@ -99,4 +150,7 @@ async def _get_dual(
     )
 
 
-COMMANDS = {ValidCommandName.find_dual: FindDualLand()}
+COMMANDS: dict[ValidCommandName, CommandStrategy] = {
+    ValidCommandName.find_dual: FindDualLand(),
+    ValidCommandName.get_rulings: GetRulings(),
+}

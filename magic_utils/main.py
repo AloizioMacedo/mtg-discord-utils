@@ -1,3 +1,5 @@
+from typing import cast
+
 import discord
 
 from client import client
@@ -29,11 +31,20 @@ async def on_message(message: discord.Message):
             await message.channel.send("This command is not valid.")
             raise ValueError
 
-        cards_info = await COMMANDS[command].process_command(
-            message_tuple[1::]
+        result = await COMMANDS[command].process_command(
+            message, message_tuple[1::]
         )
 
-        return await send_cards(message, cards_info)
+        if not result:
+            return
+
+        if isinstance(result[0], CardInfo):
+            result = cast(list[CardInfo], result)
+            return await send_cards(message, result)
+
+        elif isinstance(result[0], str):
+            result = cast(list[str], result)
+            return await send_message(message, result)
 
 
 async def send_cards(message: discord.Message, cards_info: list[CardInfo]):
@@ -48,6 +59,14 @@ async def send_cards(message: discord.Message, cards_info: list[CardInfo]):
 
     else:
         await message.channel.send(", ".join(card.name for card in cards_info))
+
+
+async def send_message(message: discord.Message, content: list[str]):
+    n = len(content)
+    for i in range(0, n, 4):
+        await message.channel.send(
+            "\n".join([strng for strng in content[i : i + 4]])
+        )
 
 
 client.run(TOKEN)
