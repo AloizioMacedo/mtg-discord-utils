@@ -2,7 +2,7 @@ import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Union
+from typing import Callable, Union, cast
 
 import aiohttp
 import discord
@@ -39,8 +39,23 @@ class CardInfo:
     normal_url: str
 
 
+def command_with_help(process_command: Callable) -> Callable:
+    async def wrapper(*args):
+        args = cast(tuple[CommandStrategy, discord.Message, list[str]], args)
+        if args[2] and args[2][0] == "--help":
+            await args[0].show_help(args[1])
+        else:
+            return await process_command(*args)
+
+    return wrapper
+
+
 class CommandStrategy(ABC):
-    """"""
+    command: ValidCommandName
+
+    @abstractmethod
+    async def show_help(self, message: discord.Message) -> None:
+        ...
 
     @abstractmethod
     async def process_command(
@@ -50,8 +65,12 @@ class CommandStrategy(ABC):
 
 
 class FindDualLand(CommandStrategy):
-    """"""
+    command = ValidCommandName.find_dual
 
+    async def show_help(self, message: discord.Message) -> None:
+        await message.channel.send(_build_help(self) + "{land_types}")
+
+    @command_with_help
     async def process_command(
         self, message: discord.Message, rest_of_command: list[str]
     ) -> list[CardInfo]:
@@ -91,8 +110,12 @@ class FindDualLand(CommandStrategy):
 
 
 class GetRulings(CommandStrategy):
-    """"""
+    command = ValidCommandName.get_rulings
 
+    async def show_help(self, message: discord.Message) -> None:
+        await message.channel.send(_build_help(self) + "{card_name}")
+
+    @command_with_help
     async def process_command(
         self, message: discord.Message, rest_of_command: list[str]
     ) -> list[str]:
@@ -135,6 +158,10 @@ class GetRulings(CommandStrategy):
 
 
 class ListCommands(CommandStrategy):
+    command = ValidCommandName.commands
+
+    async def show_help(self, message: discord.Message) -> None:
+        await message.channel.send(_build_help(self))
 
     @command_with_help
     async def process_command(
@@ -164,6 +191,10 @@ async def _get_dual(
         small_url=card["image_uris"]["small"],
         normal_url=card["image_uris"]["normal"],
     )
+
+
+def _build_help(strategy: CommandStrategy) -> str:
+    return f"Syntax:\n${strategy.command.value} "
 
 
 COMMANDS: dict[ValidCommandName, CommandStrategy] = {
