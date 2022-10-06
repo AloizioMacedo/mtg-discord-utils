@@ -13,6 +13,7 @@ SCRYFALL_URL = "https://api.scryfall.com"
 class ValidCommandName(Enum):
     find_dual = "find_dual"
     get_rulings = "get_rulings"
+    commands = "commands"
 
 
 # forest, island, mountain, plains, swamp
@@ -133,6 +134,21 @@ class GetRulings(CommandStrategy):
         return rulings
 
 
+class ListCommands(CommandStrategy):
+
+    @command_with_help
+    async def process_command(
+        self, message: discord.Message, rest_of_command: list[str]
+    ) -> Union[list[CardInfo], list[str]]:
+        if rest_of_command:
+            await message.channel.send("Invalid syntax.")
+            raise ValueError
+
+        return ["Available commands:"] + [
+            command.value for command in ValidCommandName
+        ]
+
+
 async def _get_dual(
     types: tuple[str, str], session: aiohttp.ClientSession
 ) -> CardInfo:
@@ -153,4 +169,5 @@ async def _get_dual(
 COMMANDS: dict[ValidCommandName, CommandStrategy] = {
     ValidCommandName.find_dual: FindDualLand(),
     ValidCommandName.get_rulings: GetRulings(),
+    ValidCommandName.commands: ListCommands(),
 }
