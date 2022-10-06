@@ -98,7 +98,6 @@ class GetRulings(CommandStrategy):
         card_name = " ".join(rest_of_command).lower().strip()
 
         rulings: list[str] = []
-        rulings.append(f"Rulings for {card_name}:")
 
         async with aiohttp.ClientSession() as session:
             response = await session.get(
@@ -112,6 +111,7 @@ class GetRulings(CommandStrategy):
 
             card = await response.json()
             card_id = card["id"]
+            rulings.append(f"Rulings for {card['name']}:")
 
             response = await session.get(
                 f"{SCRYFALL_URL}/cards/{card_id}/rulings"
