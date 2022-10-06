@@ -5,7 +5,7 @@ from string_treatment import treat_string
 
 PARENT = Path(__file__).parent
 
-SORTED_CARDS_DB = PARENT.joinpath("sorted-cards.json")
+SORTED_CARDS_DB = PARENT.joinpath("oracle-cards.json")
 
 
 with open(SORTED_CARDS_DB) as file:
