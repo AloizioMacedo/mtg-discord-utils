@@ -1,2 +1,4 @@
 *__pycache__*
-env.py
+_env.py
+oracle-cards.json
+sorted-cards.json

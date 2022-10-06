@@ -2,8 +2,8 @@ from typing import cast
 
 import discord
 
+from _env import TOKEN
 from client import client
-from env import TOKEN
 from mtg import COMMANDS, CardInfo, ValidCommandName
 
 
@@ -24,15 +24,20 @@ async def on_message(message: discord.Message):
         return
 
     if message.content.startswith("$"):
-        message_tuple = message.content[1::].split()
+        message_tuple = message.content[1::].split(maxsplit=1)
         try:
             command = ValidCommandName(message_tuple[0])
         except ValueError:
             await message.channel.send("This command is not valid.")
             raise ValueError
 
+        if len(message_tuple) == 2:
+            rest_of_command = message_tuple[1].strip()
+        else:
+            rest_of_command = ""
+
         result = await COMMANDS[command].process_command(
-            message, message_tuple[1::]
+            message, rest_of_command
         )
 
         if not result:
