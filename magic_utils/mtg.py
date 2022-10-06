@@ -101,7 +101,7 @@ class GetRulings(CommandStrategy):
 
         async with aiohttp.ClientSession() as session:
             response = await session.get(
-                f'{SCRYFALL_URL}/cards/named?exact="{card_name}"'
+                f'{SCRYFALL_URL}/cards/named?fuzzy="{card_name}"'
             )
             if response.status != 200:
                 raise ValueError
