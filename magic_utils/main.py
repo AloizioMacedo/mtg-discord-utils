@@ -24,7 +24,7 @@ async def on_message(message: discord.Message):
         return
 
     if message.content.startswith("$"):
-        message_tuple = message.content[1::].split()
+        message_tuple = message.content[1::].split(maxsplit=1)
         try:
             command = ValidCommandName(message_tuple[0])
         except ValueError:
@@ -32,7 +32,7 @@ async def on_message(message: discord.Message):
             raise ValueError
 
         result = await COMMANDS[command].process_command(
-            message, message_tuple[1::]
+            message, message_tuple[1].strip()
         )
 
         if not result:

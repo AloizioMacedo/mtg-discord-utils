@@ -42,8 +42,8 @@ class CardInfo:
 
 def command_with_help(process_command: Callable) -> Callable:
     async def wrapper(*args):
-        args = cast(tuple[CommandStrategy, discord.Message, list[str]], args)
-        if args[2] and args[2][0] == "--help":
+        args = cast(tuple[CommandStrategy, discord.Message, str], args)
+        if args[2] == "--help":
             await args[0].show_help(args[1])
         else:
             return await process_command(*args)
@@ -60,7 +60,7 @@ class CommandStrategy(ABC):
 
     @abstractmethod
     async def process_command(
-        self, message: discord.Message, rest_of_command: list[str]
+        self, message: discord.Message, rest_of_command: str
     ) -> Union[list[CardInfo], list[str]]:
         ...
 
@@ -73,9 +73,9 @@ class FindDualLand(CommandStrategy):
 
     @command_with_help
     async def process_command(
-        self, message: discord.Message, rest_of_command: list[str]
+        self, message: discord.Message, rest_of_command: str
     ) -> list[CardInfo]:
-        types = tuple(sorted([x.lower() for x in rest_of_command]))
+        types = tuple(sorted([x.lower() for x in rest_of_command.split()]))
 
         if len(types) == 2:
             async with aiohttp.ClientSession() as session:
@@ -118,9 +118,9 @@ class GetRulings(CommandStrategy):
 
     @command_with_help
     async def process_command(
-        self, message: discord.Message, rest_of_command: list[str]
+        self, message: discord.Message, rest_of_command: str
     ) -> list[str]:
-        card_name = " ".join(rest_of_command).lower().strip()
+        card_name = rest_of_command
 
         rulings: list[str] = []
 
@@ -166,9 +166,9 @@ class GetCard(CommandStrategy):
 
     @command_with_help
     async def process_command(
-        self, message: discord.Message, rest_of_command: list[str]
+        self, message: discord.Message, rest_of_command: str
     ) -> list[CardInfo]:
-        card_name = " ".join(rest_of_command).lower().strip()
+        card_name = rest_of_command
 
         async with aiohttp.ClientSession() as session:
             response = await session.get(
@@ -199,7 +199,7 @@ class ListCommands(CommandStrategy):
 
     @command_with_help
     async def process_command(
-        self, message: discord.Message, rest_of_command: list[str]
+        self, message: discord.Message, rest_of_command: str
     ) -> Union[list[CardInfo], list[str]]:
         if rest_of_command:
             await message.channel.send("Invalid syntax.")
