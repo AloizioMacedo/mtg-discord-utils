@@ -14,6 +14,7 @@ class ValidCommandName(Enum):
     find_dual = "find_dual"
     get_rulings = "get_rulings"
     commands = "commands"
+    get_card = "get_card"
 
 
 # forest, island, mountain, plains, swamp
@@ -157,6 +158,39 @@ class GetRulings(CommandStrategy):
         return rulings
 
 
+class GetCard(CommandStrategy):
+    command = ValidCommandName.get_card
+
+    async def show_help(self, message: discord.Message) -> None:
+        await message.channel.send(_build_help(self) + "{card_name}")
+
+    @command_with_help
+    async def process_command(
+        self, message: discord.Message, rest_of_command: list[str]
+    ) -> list[CardInfo]:
+        card_name = " ".join(rest_of_command).lower().strip()
+
+        async with aiohttp.ClientSession() as session:
+            response = await session.get(
+                f'{SCRYFALL_URL}/cards/named?fuzzy="{card_name}"'
+            )
+            if response.status == 404:
+                await message.channel.send("Card not found.")
+                raise ValueError
+            elif response.status != 200:
+                raise ValueError
+
+            card = await response.json()
+
+        return [
+            CardInfo(
+                card["name"],
+                card["image_uris"]["small"],
+                card["image_uris"]["normal"],
+            )
+        ]
+
+
 class ListCommands(CommandStrategy):
     command = ValidCommandName.commands
 
@@ -201,4 +235,5 @@ COMMANDS: dict[ValidCommandName, CommandStrategy] = {
     ValidCommandName.find_dual: FindDualLand(),
     ValidCommandName.get_rulings: GetRulings(),
     ValidCommandName.commands: ListCommands(),
+    ValidCommandName.get_card: GetCard(),
 }
