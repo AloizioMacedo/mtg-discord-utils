@@ -7,10 +7,6 @@ PARENT = Path(__file__).parent
 SORTED_CARDS_DB = PARENT.joinpath("sorted-cards.json")
 
 
-def _treat_string(s: str) -> str:
-    return _strip_accents(s.split("//")[0].strip().lower())
-
-
 def _strip_accents(s: str) -> str:
     return "".join(
         c
@@ -19,9 +15,14 @@ def _strip_accents(s: str) -> str:
     )
 
 
+def _treat_string(s: str) -> str:
+    return _strip_accents(s.split("//")[0].strip().lower())
+
+
 with open(SORTED_CARDS_DB) as file:
     all_cards: list[dict[str, str]] = json.load(file)
-    CARD_HASHMAP = {_treat_string(card["name"]): card for card in all_cards}
+
+CARD_HASHMAP = {_treat_string(card["name"]): card for card in all_cards}
 
 
 def search_for_cards(names: list[str]) -> list[dict]:

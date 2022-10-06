@@ -8,8 +8,8 @@ import aiohttp
 import discord
 from sqlalchemy.orm import Session
 
-from binary_search import search_for_cards
 from model import User, engine
+from search import search_for_cards
 
 SCRYFALL_URL = "https://api.scryfall.com"
 
