@@ -9,6 +9,8 @@ services:
 
   db-users:
     image: postgres:14.5-alpine
+    volumes:
+      - usersdb:/var/lib/postgresql/data
     ports:
       - '15444:5432'
     environment:
@@ -21,3 +23,6 @@ services:
       timeout: 60s
       retries: 5
       start_period: 80s
+
+volumes:
+  usersdb:
