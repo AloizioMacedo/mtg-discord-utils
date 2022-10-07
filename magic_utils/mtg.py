@@ -6,6 +6,7 @@ from typing import Callable, Union, cast
 
 import aiohttp
 import discord
+from rapidfuzz import fuzz
 from sqlalchemy.orm import Session
 
 from model import User, engine
@@ -294,7 +295,10 @@ class SearchDeck(CommandStrategy):
         query_results = [
             card
             for card in cards
-            if text_query in card.get("oracle_text", "").lower()
+            if fuzz.partial_ratio(
+                text_query, card.get("oracle_text", "").lower()
+            )
+            > 90
         ]
 
         return [
