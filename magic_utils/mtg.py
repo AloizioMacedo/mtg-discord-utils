@@ -9,6 +9,7 @@ import discord
 from rapidfuzz import fuzz
 from sqlalchemy.orm import Session
 
+from env import FUZZY_THRESHOLD
 from model import User, engine
 from search import search_for_cards
 
@@ -298,7 +299,7 @@ class SearchDeck(CommandStrategy):
             if fuzz.partial_ratio(
                 text_query, card.get("oracle_text", "").lower()
             )
-            > 90
+            > FUZZY_THRESHOLD
         ]
 
         if query_results:
