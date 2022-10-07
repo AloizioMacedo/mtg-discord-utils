@@ -6,6 +6,7 @@ from typing import Callable, Union, cast
 
 import aiohttp
 import discord
+from rapidfuzz import fuzz
 from sqlalchemy.orm import Session
 
 from model import User, engine
@@ -294,17 +295,23 @@ class SearchDeck(CommandStrategy):
         query_results = [
             card
             for card in cards
-            if text_query in card.get("oracle_text", "").lower()
+            if fuzz.partial_ratio(
+                text_query, card.get("oracle_text", "").lower()
+            )
+            > 90
         ]
 
-        return [
-            CardInfo(
-                card["name"],
-                card["image_uris"]["small"],
-                card["image_uris"]["normal"],
-            )
-            for card in query_results
-        ]
+        if query_results:
+            return [
+                CardInfo(
+                    card["name"],
+                    card["image_uris"]["small"],
+                    card["image_uris"]["normal"],
+                )
+                for card in query_results
+            ]
+        else:
+            return ["No match was found."]
 
 
 async def _get_dual(

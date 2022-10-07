@@ -3,3 +3,5 @@ aiohttp == 3.8.3
 certifi == 2022.9.24
 SQLAlchemy == 1.4.41
 psycopg2-binary == 2.9.4
+python-Levenshtein == 0.20.5
+rapidfuzz == 2.11.1
