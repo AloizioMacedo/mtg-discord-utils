@@ -301,14 +301,17 @@ class SearchDeck(CommandStrategy):
             > 90
         ]
 
-        return [
-            CardInfo(
-                card["name"],
-                card["image_uris"]["small"],
-                card["image_uris"]["normal"],
-            )
-            for card in query_results
-        ]
+        if query_results:
+            return [
+                CardInfo(
+                    card["name"],
+                    card["image_uris"]["small"],
+                    card["image_uris"]["normal"],
+                )
+                for card in query_results
+            ]
+        else:
+            return ["No match was found."]
 
 
 async def _get_dual(
