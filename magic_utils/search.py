@@ -7,7 +7,7 @@ PARENT = Path(__file__).parent
 
 CARDS_1_DB = PARENT.joinpath("oracle-cards-1.json")
 CARDS_2_DB = PARENT.joinpath("oracle-cards-2.json")
-CARDS_3_DB = PARENT.joinpath("oracle-cards-2.json")
+CARDS_3_DB = PARENT.joinpath("oracle-cards-3.json")
 
 all_cards: list[dict[str, str]] = []
 
