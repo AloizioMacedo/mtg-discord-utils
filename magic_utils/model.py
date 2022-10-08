@@ -1,13 +1,11 @@
 from sqlalchemy import JSON, BigInteger, Column, Integer, String, create_engine
 from sqlalchemy.orm import declarative_base
 
-from env import POSTGRES_SERVICE
+from env import POSTGRES_CONNECTION_URL
 
 Base = declarative_base()
 
-engine = create_engine(
-    f"postgresql://postgres:postgres@{POSTGRES_SERVICE}/postgres"
-)
+engine = create_engine(POSTGRES_CONNECTION_URL)
 
 
 class User(Base):

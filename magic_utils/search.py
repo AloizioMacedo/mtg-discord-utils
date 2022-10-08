@@ -5,11 +5,20 @@ from string_treatment import treat_string
 
 PARENT = Path(__file__).parent
 
-SORTED_CARDS_DB = PARENT.joinpath("oracle-cards.json")
+CARDS_1_DB = PARENT.joinpath("oracle-cards-1.json")
+CARDS_2_DB = PARENT.joinpath("oracle-cards-2.json")
+CARDS_3_DB = PARENT.joinpath("oracle-cards-2.json")
 
+all_cards: list[dict[str, str]] = []
 
-with open(SORTED_CARDS_DB) as file:
-    all_cards: list[dict[str, str]] = json.load(file)
+with open(CARDS_1_DB) as file:
+    all_cards += json.load(file)
+
+with open(CARDS_2_DB) as file:
+    all_cards += json.load(file)
+
+with open(CARDS_3_DB) as file:
+    all_cards += json.load(file)
 
 CARD_HASHMAP = {treat_string(card["name"]): card for card in all_cards}
 
