@@ -20,7 +20,12 @@ with open(CARDS_2_DB) as file:
 with open(CARDS_3_DB) as file:
     all_cards += json.load(file)
 
-CARD_HASHMAP = {treat_string(card["name"]): card for card in all_cards}
+KEYS = ["name", "image_uris", "oracle_text"]
+
+CARD_HASHMAP = {
+    treat_string(card["name"]): {key: card.get(key, "") for key in KEYS}
+    for card in all_cards
+}
 
 
 def search_for_cards(names: list[str]) -> list[dict]:
