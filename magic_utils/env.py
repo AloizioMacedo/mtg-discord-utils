@@ -5,5 +5,9 @@ try:
 except ModuleNotFoundError:
     TOKEN = os.environ.get("TOKEN")
 
-POSTGRES_SERVICE = os.environ.get("POSTGRES_SERVICE", "localhost:15444")
+_POSTGRES_SERVICE = os.environ.get("POSTGRES_SERVICE", "localhost:15444")
+POSTGRES_CONNECTION_URL = os.environ.get(
+    "POSTGRES_CONNECTION_URL",
+    f"postgresql://postgres:postgres@{_POSTGRES_SERVICE}/postgres",
+)
 FUZZY_THRESHOLD = float(os.environ.get("FUZZY_THRESHOLD", 85))
