@@ -7,10 +7,11 @@ from model import Card, engine
 from search import treat_string
 
 PARENT = Path(__file__).parent
+UTILS = PARENT.joinpath("utils")
 
-CARDS_1_DB = PARENT.joinpath("oracle-cards-1.json")
-CARDS_2_DB = PARENT.joinpath("oracle-cards-2.json")
-CARDS_3_DB = PARENT.joinpath("oracle-cards-3.json")
+CARDS_1_DB = UTILS.joinpath("oracle-cards-1.json")
+CARDS_2_DB = UTILS.joinpath("oracle-cards-2.json")
+CARDS_3_DB = UTILS.joinpath("oracle-cards-3.json")
 
 
 def _get_cards() -> list[dict]:
