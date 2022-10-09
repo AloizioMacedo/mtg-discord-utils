@@ -281,6 +281,7 @@ class CreateDeck(CommandStrategy):
                     sorted_by_time: list[Deck] = sorted(
                         decks, key=lambda x: x.timestamp  # type: ignore
                     )
+                    sorted_by_time.pop(0)
                     sorted_by_time.append(
                         Deck(
                             name=name,
