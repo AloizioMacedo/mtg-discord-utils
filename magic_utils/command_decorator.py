@@ -9,7 +9,11 @@ def commands(f: Callable) -> Callable:
         content = rest_of_command
 
         content = content.strip()
-        split_content = shlex.split(content)
+        sh = shlex.shlex(content)
+        sh.whitespace = " "
+        sh.whitespace_split = True
+        split_content = list(sh)
+
         organized_commands: dict[str, Any] = {
             "message": message,
             "main": "",
