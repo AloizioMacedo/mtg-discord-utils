@@ -17,4 +17,12 @@ class User(Base):
     deck = Column(JSON)
 
 
+class Card(Base):
+    __tablename__ = "card"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    card_attrs = Column(JSON)
+
+
 Base.metadata.create_all(engine)
