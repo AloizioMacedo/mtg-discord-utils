@@ -1,16 +1,20 @@
 import asyncio
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from typing import Callable, Iterable, Union, cast
+from uuid import uuid4
 
 import aiohttp
 import discord
 from rapidfuzz import fuzz
 from sqlalchemy.orm import Session
+from tabulate import tabulate
 
+from command_decorator import commands
 from env import FUZZY_THRESHOLD
-from model import Card, User, engine
+from model import Card, Deck, User, engine
 from search import search_for_card_ids
 
 SCRYFALL_URL = "https://api.scryfall.com"
@@ -23,6 +27,8 @@ class ValidCommandName(Enum):
     get_card = "get_card"
     create_deck = "create_deck"
     search_deck = "search_deck"
+    list_decks = "list_decks"
+    select_deck = "select_deck"
 
 
 # forest, island, mountain, plains, swamp
@@ -48,17 +54,6 @@ class CardInfo:
     normal_url: str
 
 
-def command_with_help(process_command: Callable) -> Callable:
-    async def wrapper(*args):
-        args = cast(tuple[CommandStrategy, discord.Message, str], args)
-        if args[2] == "--help":
-            await args[0].show_help(args[1])
-        else:
-            return await process_command(*args)
-
-    return wrapper
-
-
 class CommandStrategy(ABC):
     command: ValidCommandName
 
@@ -66,9 +61,10 @@ class CommandStrategy(ABC):
     async def show_help(self, message: discord.Message) -> None:
         ...
 
+    @commands
     @abstractmethod
     async def process_command(
-        self, message: discord.Message, rest_of_command: str
+        self, message: discord.Message, main: str, *args
     ) -> Union[list[CardInfo], list[str]]:
         ...
 
@@ -79,11 +75,15 @@ class FindDualLand(CommandStrategy):
     async def show_help(self, message: discord.Message) -> None:
         await message.channel.send(_build_help(self) + "{land_types}")
 
-    @command_with_help
+    @commands
     async def process_command(
-        self, message: discord.Message, rest_of_command: str
+        self, message: discord.Message, main: str, help: bool = False
     ) -> list[CardInfo]:
-        types = tuple(sorted([x.lower() for x in rest_of_command.split()]))
+        if help:
+            await self.show_help(message)
+            return []
+
+        types = tuple(sorted([x.lower() for x in main.split()]))
 
         if len(types) == 2:
             async with aiohttp.ClientSession() as session:
@@ -124,11 +124,15 @@ class GetRulings(CommandStrategy):
     async def show_help(self, message: discord.Message) -> None:
         await message.channel.send(_build_help(self) + "{card_name}")
 
-    @command_with_help
+    @commands
     async def process_command(
-        self, message: discord.Message, rest_of_command: str
+        self, message: discord.Message, main: str, help: bool = False
     ) -> list[str]:
-        card_name = rest_of_command
+        if help:
+            await self.show_help(message)
+            return []
+
+        card_name = main
 
         rulings: list[str] = []
 
@@ -172,11 +176,15 @@ class GetCard(CommandStrategy):
     async def show_help(self, message: discord.Message) -> None:
         await message.channel.send(_build_help(self) + "{card_name}")
 
-    @command_with_help
+    @commands
     async def process_command(
-        self, message: discord.Message, rest_of_command: str
+        self, message: discord.Message, main: str, help: bool = False
     ) -> list[CardInfo]:
-        card_name = rest_of_command
+        if help:
+            await self.show_help(message)
+            return []
+
+        card_name = main
 
         async with aiohttp.ClientSession() as session:
             response = await session.get(
@@ -205,11 +213,15 @@ class ListCommands(CommandStrategy):
     async def show_help(self, message: discord.Message) -> None:
         await message.channel.send(_build_help(self))
 
-    @command_with_help
+    @commands
     async def process_command(
-        self, message: discord.Message, rest_of_command: str
+        self, message: discord.Message, main: str, help: bool = False
     ) -> Union[list[CardInfo], list[str]]:
-        if rest_of_command:
+        if help:
+            await self.show_help(message)
+            return []
+
+        if main:
             await message.channel.send("Invalid syntax.")
             raise ValueError
 
@@ -226,13 +238,22 @@ class CreateDeck(CommandStrategy):
             _build_help(self) + "\n{MTG_ARENA_DECK_LIST}"
         )
 
-    @command_with_help
+    @commands
     async def process_command(
-        self, message: discord.Message, rest_of_command: str
+        self,
+        message: discord.Message,
+        main: str,
+        help: bool = False,
+        name: str = "",
     ) -> Union[list[CardInfo], list[str]]:
-        potential_card_names = [
-            x.lower().strip() for x in rest_of_command.split("\n")
-        ]
+        if help:
+            await self.show_help(message)
+            return []
+
+        if not name:
+            name = str(uuid4())
+
+        potential_card_names = [x.lower().strip() for x in main.split("\n")]
         cards_with_quantities = [
             x.split(maxsplit=1) for x in potential_card_names
         ]
@@ -253,14 +274,44 @@ class CreateDeck(CommandStrategy):
 
             if result:
                 result = cast(User, result)
-                result.deck = {"deck": cards}  # type: ignore
+                decks: list[Deck] = result.decks
+
+                if len(decks) >= 3:
+                    sorted_by_time: list[Deck] = sorted(
+                        decks, key=lambda x: x.timestamp  # type: ignore
+                    )
+                    sorted_by_time.append(
+                        Deck(
+                            name=name,
+                            user_id=result.id,
+                            deck={"deck": cards},
+                            timestamp=time.time(),
+                        )
+                    )
+                    result.decks = sorted_by_time
+                else:
+                    decks.append(
+                        Deck(
+                            name=name,
+                            user_id=result.id,
+                            deck={"deck": cards},
+                            timestamp=time.time(),
+                        )
+                    )
 
             else:
                 new_user = User(
                     discord_id=author.id,
                     name=author.name,
-                    deck={"deck": cards},
                 )
+                new_user.decks = [
+                    Deck(
+                        name=name,
+                        user_id=new_user.id,
+                        deck={"deck": cards},
+                        timestamp=time.time(),
+                    )
+                ]
                 session.add(new_user)
 
             session.commit()
@@ -268,18 +319,22 @@ class CreateDeck(CommandStrategy):
         return [f"Deck with {len(card_names)} succesfully uploaded."]
 
 
-class SearchDeck(CommandStrategy):
+class ListDecks(CommandStrategy):
     command = ValidCommandName.search_deck
 
     async def show_help(self, message: discord.Message) -> None:
-        await message.channel.send(_build_help(self) + "{keyword}")
+        await message.channel.send(_build_help(self))
 
-    @command_with_help
+    @commands
     async def process_command(
-        self, message: discord.Message, rest_of_command: str
+        self, message: discord.Message, main: str, help: bool = False
     ) -> Union[list[CardInfo], list[str]]:
+        if help:
+            await self.show_help(message)
+            return []
+
         author = message.author
-        text_query = rest_of_command.lower()
+        text_query = main.lower()
 
         with Session(engine) as session:
             query = session.query(User).filter(User.discord_id == author.id)
@@ -289,9 +344,91 @@ class SearchDeck(CommandStrategy):
                 result = cast(User, result)
 
             else:
+                return ["Could not find decks for this user."]
+
+            decks: list[Deck] = result.decks
+            return [
+                tabulate(
+                    [[f"{deck.id}", f"{deck.name}"] for deck in decks],
+                    headers=["id", "name"],
+                )
+            ]
+
+
+class SelectDeck(CommandStrategy):
+    command = ValidCommandName.search_deck
+
+    async def show_help(self, message: discord.Message) -> None:
+        await message.channel.send(_build_help(self) + "{DECK_ID}")
+
+    @commands
+    async def process_command(
+        self, message: discord.Message, main: str, help: bool = False
+    ) -> Union[list[CardInfo], list[str]]:
+        if help:
+            await self.show_help(message)
+            return []
+
+        selected_deck_id = int(main)
+
+        author = message.author
+
+        with Session(engine) as session:
+            query = session.query(User).filter(User.discord_id == author.id)
+            result = query.first()
+
+            if result:
+                result = cast(User, result)
+
+            else:
+                return ["Could not find decks for this user."]
+
+            decks: list[Deck] = result.decks
+            if selected_deck_id not in [deck.id for deck in decks]:
+                return ["The user does not have a deck with that ID."]
+
+            else:
+                result.selected_deck_id = selected_deck_id
+                session.commit()
+                return ["Deck selected."]
+
+
+class SearchDeck(CommandStrategy):
+    command = ValidCommandName.search_deck
+
+    async def show_help(self, message: discord.Message) -> None:
+        await message.channel.send(_build_help(self) + "{keyword}")
+
+    @commands
+    async def process_command(
+        self, message: discord.Message, main: str, help: bool = False
+    ) -> Union[list[CardInfo], list[str]]:
+        if help:
+            await self.show_help(message)
+            return []
+
+        author = message.author
+        text_query = main.lower()
+
+        with Session(engine) as session:
+            query = session.query(User).filter(User.discord_id == author.id)
+            result = query.first()
+            if result:
+                result = cast(User, result)
+            else:
                 return ["Could not find a deck."]
 
-            cards: list[int] = result.deck["deck"]  # type: ignore
+            q = session.query(Deck).filter(
+                Deck.user_id == result.id, Deck.id == result.selected_deck_id
+            )
+
+            deck_result = q.first()
+            if deck_result:
+                deck_result = cast(Deck, deck_result)
+            else:
+                return ["User does not have a deck selected."]
+
+            cards: list[int] = deck_result.deck["deck"]  # type: ignore
 
             q: Iterable[Card] = session.query(Card).filter(Card.id.in_(cards))
 
@@ -348,5 +485,7 @@ COMMANDS: dict[ValidCommandName, CommandStrategy] = {
     ValidCommandName.commands: ListCommands(),
     ValidCommandName.get_card: GetCard(),
     ValidCommandName.create_deck: CreateDeck(),
+    ValidCommandName.select_deck: SelectDeck(),
     ValidCommandName.search_deck: SearchDeck(),
+    ValidCommandName.list_decks: ListDecks(),
 }
