@@ -49,17 +49,6 @@ class CardInfo:
     normal_url: str
 
 
-def command_with_help(process_command: Callable) -> Callable:
-    async def wrapper(*args):
-        args = cast(tuple[CommandStrategy, discord.Message, str], args)
-        if args[2] == "--help":
-            await args[0].show_help(args[1])
-        else:
-            return await process_command(*args)
-
-    return wrapper
-
-
 class CommandStrategy(ABC):
     command: ValidCommandName
 
