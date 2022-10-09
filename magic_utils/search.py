@@ -1,6 +1,10 @@
 import json
 from pathlib import Path
+from typing import cast
 
+from sqlalchemy.orm import Session
+
+from model import Card, engine
 from string_treatment import treat_string
 
 PARENT = Path(__file__).parent
@@ -33,15 +37,19 @@ def _get_cards_hashmap():
 CARD_HASHMAP = _get_cards_hashmap()
 
 
-def search_for_cards(names: list[str]) -> list[dict]:
-    cards_list: list[dict] = []
+def search_for_card_ids(names: list[str]) -> list[int]:
+    cards_list: list[int] = []
     treated_names = [treat_string(name) for name in names]
 
-    for name in treated_names:
-        card: dict[str, str] = CARD_HASHMAP[name]
-        if treat_string(card["name"]) != name:
-            raise ValueError(f"Weird name: {card['name']}")
+    with Session(engine) as session:
+        for name in treated_names:
+            q = session.query(Card).filter_by(name=treat_string(name))
+            card = q.first()
 
-        cards_list.append(card)
+            if card is None:
+                raise ValueError(f"Weird name: {name}")
+
+            card = cast(Card, card)
+            cards_list.append(card.id)  # type: ignore
 
     return cards_list
