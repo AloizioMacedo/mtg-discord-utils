@@ -30,7 +30,7 @@ def commands(f: Callable) -> Callable:
                 else:
                     organized_commands[split_content[0][2::]] = split_content[
                         1
-                    ]
+                    ].strip('"')
                     split_content = split_content[2::]
             else:
                 organized_commands["main"] = " ".join(split_content)
