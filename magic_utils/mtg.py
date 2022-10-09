@@ -9,6 +9,7 @@ import discord
 from rapidfuzz import fuzz
 from sqlalchemy.orm import Session
 
+from command_decorator import commands
 from env import FUZZY_THRESHOLD
 from model import Card, User, engine
 from search import search_for_card_ids
@@ -66,9 +67,10 @@ class CommandStrategy(ABC):
     async def show_help(self, message: discord.Message) -> None:
         ...
 
+    @commands
     @abstractmethod
     async def process_command(
-        self, message: discord.Message, rest_of_command: str
+        self, message: discord.Message, main: str, *args
     ) -> Union[list[CardInfo], list[str]]:
         ...
 
@@ -79,11 +81,15 @@ class FindDualLand(CommandStrategy):
     async def show_help(self, message: discord.Message) -> None:
         await message.channel.send(_build_help(self) + "{land_types}")
 
-    @command_with_help
+    @commands
     async def process_command(
-        self, message: discord.Message, rest_of_command: str
+        self, message: discord.Message, main: str, help: bool = False
     ) -> list[CardInfo]:
-        types = tuple(sorted([x.lower() for x in rest_of_command.split()]))
+        if help:
+            await self.show_help(message)
+            return []
+
+        types = tuple(sorted([x.lower() for x in main.split()]))
 
         if len(types) == 2:
             async with aiohttp.ClientSession() as session:
@@ -124,11 +130,15 @@ class GetRulings(CommandStrategy):
     async def show_help(self, message: discord.Message) -> None:
         await message.channel.send(_build_help(self) + "{card_name}")
 
-    @command_with_help
+    @commands
     async def process_command(
-        self, message: discord.Message, rest_of_command: str
+        self, message: discord.Message, main: str, help: bool = False
     ) -> list[str]:
-        card_name = rest_of_command
+        if help:
+            await self.show_help(message)
+            return []
+
+        card_name = main
 
         rulings: list[str] = []
 
@@ -172,11 +182,15 @@ class GetCard(CommandStrategy):
     async def show_help(self, message: discord.Message) -> None:
         await message.channel.send(_build_help(self) + "{card_name}")
 
-    @command_with_help
+    @commands
     async def process_command(
-        self, message: discord.Message, rest_of_command: str
+        self, message: discord.Message, main: str, help: bool = False
     ) -> list[CardInfo]:
-        card_name = rest_of_command
+        if help:
+            await self.show_help(message)
+            return []
+
+        card_name = main
 
         async with aiohttp.ClientSession() as session:
             response = await session.get(
@@ -205,11 +219,15 @@ class ListCommands(CommandStrategy):
     async def show_help(self, message: discord.Message) -> None:
         await message.channel.send(_build_help(self))
 
-    @command_with_help
+    @commands
     async def process_command(
-        self, message: discord.Message, rest_of_command: str
+        self, message: discord.Message, main: str, help: bool = False
     ) -> Union[list[CardInfo], list[str]]:
-        if rest_of_command:
+        if help:
+            await self.show_help(message)
+            return []
+
+        if main:
             await message.channel.send("Invalid syntax.")
             raise ValueError
 
@@ -226,13 +244,15 @@ class CreateDeck(CommandStrategy):
             _build_help(self) + "\n{MTG_ARENA_DECK_LIST}"
         )
 
-    @command_with_help
+    @commands
     async def process_command(
-        self, message: discord.Message, rest_of_command: str
+        self, message: discord.Message, main: str, help: bool = False
     ) -> Union[list[CardInfo], list[str]]:
-        potential_card_names = [
-            x.lower().strip() for x in rest_of_command.split("\n")
-        ]
+        if help:
+            await self.show_help(message)
+            return []
+
+        potential_card_names = [x.lower().strip() for x in main.split("\n")]
         cards_with_quantities = [
             x.split(maxsplit=1) for x in potential_card_names
         ]
@@ -274,12 +294,16 @@ class SearchDeck(CommandStrategy):
     async def show_help(self, message: discord.Message) -> None:
         await message.channel.send(_build_help(self) + "{keyword}")
 
-    @command_with_help
+    @commands
     async def process_command(
-        self, message: discord.Message, rest_of_command: str
+        self, message: discord.Message, main: str, help: bool = False
     ) -> Union[list[CardInfo], list[str]]:
+        if help:
+            await self.show_help(message)
+            return []
+
         author = message.author
-        text_query = rest_of_command.lower()
+        text_query = main.lower()
 
         with Session(engine) as session:
             query = session.query(User).filter(User.discord_id == author.id)
