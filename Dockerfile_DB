@@ -13,6 +13,4 @@ COPY . .
 
 WORKDIR /magic_utils
 
-RUN rm -rf utils
-
-CMD python main.py
+CMD python create_cards_db.py

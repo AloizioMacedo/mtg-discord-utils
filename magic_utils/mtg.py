@@ -2,7 +2,7 @@ import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Union, cast
+from typing import Callable, Iterable, Union, cast
 
 import aiohttp
 import discord
@@ -10,8 +10,8 @@ from rapidfuzz import fuzz
 from sqlalchemy.orm import Session
 
 from env import FUZZY_THRESHOLD
-from model import User, engine
-from search import search_for_cards
+from model import Card, User, engine
+from search import search_for_card_ids
 
 SCRYFALL_URL = "https://api.scryfall.com"
 
@@ -244,7 +244,7 @@ class CreateDeck(CommandStrategy):
             except:
                 continue
 
-        cards = search_for_cards(card_names)
+        cards = search_for_card_ids(card_names)
         author = message.author
 
         with Session(engine) as session:
@@ -291,25 +291,31 @@ class SearchDeck(CommandStrategy):
             else:
                 return ["Could not find a deck."]
 
-            cards: list[dict] = result.deck["deck"]  # type: ignore
+            cards: list[int] = result.deck["deck"]  # type: ignore
 
-        query_results = [
-            card
-            for card in cards
-            if fuzz.partial_ratio(
-                text_query, card.get("oracle_text", "").lower()
-            )
-            > FUZZY_THRESHOLD
-        ]
+            q: Iterable[Card] = session.query(Card).filter(Card.id.in_(cards))
+
+            card_attrs: list[dict] = [
+                card.card_attrs for card in q
+            ]  # type: ignore
+
+            query_results = [
+                card_json
+                for card_json in card_attrs
+                if fuzz.partial_ratio(
+                    text_query, card_json.get("oracle_text", "").lower()
+                )
+                > FUZZY_THRESHOLD
+            ]
 
         if query_results:
             return [
                 CardInfo(
-                    card["name"],
-                    card["image_uris"]["small"],
-                    card["image_uris"]["normal"],
+                    card_json["name"],
+                    card_json["image_uris"]["small"],
+                    card_json["image_uris"]["normal"],
                 )
-                for card in query_results
+                for card_json in query_results
             ]
         else:
             return ["No match was found."]
