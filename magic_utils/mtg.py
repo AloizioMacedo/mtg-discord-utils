@@ -348,6 +348,7 @@ class ListDecks(CommandStrategy):
                 return ["Could not find decks for this user."]
 
             decks: list[Deck] = result.decks
+            decks = sorted(decks, key=lambda x: x.timestamp)  # type: ignore
             return [
                 tabulate(
                     [[f"{deck.id}", f"{deck.name}"] for deck in decks],
