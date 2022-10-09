@@ -29,6 +29,7 @@ class ValidCommandName(Enum):
     search_deck = "search_deck"
     list_decks = "list_decks"
     select_deck = "select_deck"
+    rename_deck = "rename_deck"
 
 
 # forest, island, mountain, plains, swamp
@@ -393,6 +394,49 @@ class SelectDeck(CommandStrategy):
                 return ["Deck selected."]
 
 
+class RenameDeck(CommandStrategy):
+    command = ValidCommandName.search_deck
+
+    async def show_help(self, message: discord.Message) -> None:
+        await message.channel.send(_build_help(self) + "{NEW_NAME}")
+
+    @commands
+    async def process_command(
+        self, message: discord.Message, main: str, help: bool = False
+    ) -> Union[list[CardInfo], list[str]]:
+        if help:
+            await self.show_help(message)
+            return []
+
+        author = message.author
+
+        with Session(engine) as session:
+            query = session.query(User).filter(User.discord_id == author.id)
+            result = query.first()
+
+            if result:
+                result = cast(User, result)
+
+            else:
+                return ["Could not find decks for this user."]
+
+            selected_deck_id = result.selected_deck_id
+
+            if selected_deck_id is None:
+                return [
+                    "Please, select a deck with"
+                    f" ${ValidCommandName.select_deck.value}"
+                ]
+            decks: list[Deck] = result.decks
+            for deck in decks:
+                if deck.id == selected_deck_id:
+                    deck.name = main  # type: ignore
+                    session.commit()
+                    return ["Deck renamed successfully."]
+
+            return ["Deck to be renamed could not be found anymore."]
+
+
 class SearchDeck(CommandStrategy):
     command = ValidCommandName.search_deck
 
@@ -488,4 +532,5 @@ COMMANDS: dict[ValidCommandName, CommandStrategy] = {
     ValidCommandName.select_deck: SelectDeck(),
     ValidCommandName.search_deck: SearchDeck(),
     ValidCommandName.list_decks: ListDecks(),
+    ValidCommandName.rename_deck: RenameDeck(),
 }
