@@ -3,7 +3,7 @@ import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Iterable, Union, cast
+from typing import Iterable, Union, cast
 from uuid import uuid4
 
 import aiohttp
@@ -59,7 +59,7 @@ class CommandStrategy(ABC):
     command: ValidCommandName
 
     @abstractmethod
-    async def show_help(self, message: discord.Message) -> None:
+    async def make_help(self) -> list[str]:
         ...
 
     @commands
@@ -73,16 +73,22 @@ class CommandStrategy(ABC):
 class FindDualLand(CommandStrategy):
     command = ValidCommandName.find_dual
 
-    async def show_help(self, message: discord.Message) -> None:
-        await message.channel.send(_build_help(self) + "{land_types}")
+    def make_help(self) -> list[str]:
+        return [
+            "Finds the dual land(s) that enter the battlefield untapped"
+            " given one or two land types. If only one is chosen,"
+            " it returns the four respective dual lands. If two are"
+            " chosen, it returns just the one.",
+            "Example: '$find_dual island swamp'",
+            _build_help(self) + "{land_types}",
+        ]
 
     @commands
     async def process_command(
         self, message: discord.Message, main: str, help: bool = False
-    ) -> list[CardInfo]:
+    ) -> Union[list[CardInfo], list[str]]:
         if help:
-            await self.show_help(message)
-            return []
+            return self.make_help()
 
         types = tuple(sorted([x.lower() for x in main.split()]))
 
@@ -122,16 +128,19 @@ class FindDualLand(CommandStrategy):
 class GetRulings(CommandStrategy):
     command = ValidCommandName.get_rulings
 
-    async def show_help(self, message: discord.Message) -> None:
-        await message.channel.send(_build_help(self) + "{card_name}")
+    def make_help(self) -> list[str]:
+        return [
+            "Finds rulings of a given specified card.",
+            "Example: '$get_rulings Oko, Thief of Crowns'",
+            _build_help(self) + "{card_name}",
+        ]
 
     @commands
     async def process_command(
         self, message: discord.Message, main: str, help: bool = False
     ) -> list[str]:
         if help:
-            await self.show_help(message)
-            return []
+            return self.make_help()
 
         card_name = main
 
@@ -174,16 +183,19 @@ class GetRulings(CommandStrategy):
 class GetCard(CommandStrategy):
     command = ValidCommandName.get_card
 
-    async def show_help(self, message: discord.Message) -> None:
-        await message.channel.send(_build_help(self) + "{card_name}")
+    def make_help(self) -> list[str]:
+        return [
+            "Finds a given card.",
+            "Example: '$get_card Sol Ring'",
+            _build_help(self) + "{card_name}",
+        ]
 
     @commands
     async def process_command(
         self, message: discord.Message, main: str, help: bool = False
-    ) -> list[CardInfo]:
+    ) -> Union[list[CardInfo], list[str]]:
         if help:
-            await self.show_help(message)
-            return []
+            return self.make_help()
 
         card_name = main
 
@@ -211,16 +223,18 @@ class GetCard(CommandStrategy):
 class ListCommands(CommandStrategy):
     command = ValidCommandName.commands
 
-    async def show_help(self, message: discord.Message) -> None:
-        await message.channel.send(_build_help(self))
+    def make_help(self) -> list[str]:
+        return [
+            "List all commands.",
+            _build_help(self),
+        ]
 
     @commands
     async def process_command(
         self, message: discord.Message, main: str, help: bool = False
     ) -> Union[list[CardInfo], list[str]]:
         if help:
-            await self.show_help(message)
-            return []
+            return self.make_help()
 
         if main:
             await message.channel.send("Invalid syntax.")
@@ -234,10 +248,19 @@ class ListCommands(CommandStrategy):
 class CreateDeck(CommandStrategy):
     command = ValidCommandName.create_deck
 
-    async def show_help(self, message: discord.Message) -> None:
-        await message.channel.send(
-            _build_help(self) + "\n{MTG_ARENA_DECK_LIST}"
-        )
+    def make_help(self) -> list[str]:
+        return [
+            "Creates a deck by accepting MTGA format. Accepts an optional"
+            " --name parameter that can be used to give a certain name to"
+            " the deck to identify it. If this parameter is not used, it"
+            " will generate a uuid4 as its name. OBS: There is a maximum of"
+            " 3 decks per user at the moment. Once over this limit, it"
+            " overwrites the oldest deck.",
+            'Example: \'$create_deck --name "Illegal Simple Red"\n'
+            "1 Fervent Champion\n"
+            "1 Mountain'",
+            _build_help(self) + "\n{MTG_ARENA_DECK_LIST}",
+        ]
 
     @commands
     async def process_command(
@@ -248,8 +271,7 @@ class CreateDeck(CommandStrategy):
         name: str = "",
     ) -> Union[list[CardInfo], list[str]]:
         if help:
-            await self.show_help(message)
-            return []
+            return self.make_help()
 
         if not name:
             name = str(uuid4())
@@ -324,16 +346,18 @@ class CreateDeck(CommandStrategy):
 class ListDecks(CommandStrategy):
     command = ValidCommandName.search_deck
 
-    async def show_help(self, message: discord.Message) -> None:
-        await message.channel.send(_build_help(self))
+    def make_help(self) -> list[str]:
+        return [
+            "Lists all current decks of the user making the command.",
+            _build_help(self),
+        ]
 
     @commands
     async def process_command(
         self, message: discord.Message, main: str, help: bool = False
     ) -> Union[list[CardInfo], list[str]]:
         if help:
-            await self.show_help(message)
-            return []
+            return self.make_help()
 
         author = message.author
         text_query = main.lower()
@@ -361,16 +385,20 @@ class ListDecks(CommandStrategy):
 class SelectDeck(CommandStrategy):
     command = ValidCommandName.search_deck
 
-    async def show_help(self, message: discord.Message) -> None:
-        await message.channel.send(_build_help(self) + "{DECK_ID}")
+    def make_help(self) -> list[str]:
+        return [
+            "Selects a deck (by its id) in order to be able to search on"
+            " it and rename it.",
+            "Example: '$select_deck 3'",
+            _build_help(self) + "{deck_id}",
+        ]
 
     @commands
     async def process_command(
         self, message: discord.Message, main: str, help: bool = False
     ) -> Union[list[CardInfo], list[str]]:
         if help:
-            await self.show_help(message)
-            return []
+            return self.make_help()
 
         selected_deck_id = int(main)
 
@@ -399,16 +427,19 @@ class SelectDeck(CommandStrategy):
 class RenameDeck(CommandStrategy):
     command = ValidCommandName.search_deck
 
-    async def show_help(self, message: discord.Message) -> None:
-        await message.channel.send(_build_help(self) + "{NEW_NAME}")
+    def make_help(self) -> list[str]:
+        return [
+            "Renames the selected deck (see $select_deck).",
+            "Example: '$rename_deck \"The deck I love the most!\"'",
+            _build_help(self) + "{new_name}",
+        ]
 
     @commands
     async def process_command(
         self, message: discord.Message, main: str, help: bool = False
     ) -> Union[list[CardInfo], list[str]]:
         if help:
-            await self.show_help(message)
-            return []
+            return self.make_help()
 
         author = message.author
 
@@ -442,16 +473,21 @@ class RenameDeck(CommandStrategy):
 class SearchDeck(CommandStrategy):
     command = ValidCommandName.search_deck
 
-    async def show_help(self, message: discord.Message) -> None:
-        await message.channel.send(_build_help(self) + "{keyword}")
+    def make_help(self) -> list[str]:
+        return [
+            "Searches your selected deck (see $select_deck) for a card that"
+            " contains the specified string in its text. OBS: The search"
+            " allows for some leeway on the spellings.",
+            "Example: '$search_deck destroy target'",
+            _build_help(self) + "{text}",
+        ]
 
     @commands
     async def process_command(
         self, message: discord.Message, main: str, help: bool = False
     ) -> Union[list[CardInfo], list[str]]:
         if help:
-            await self.show_help(message)
-            return []
+            return self.make_help()
 
         author = message.author
         text_query = main.lower()

@@ -31,7 +31,7 @@ Some basic help is available by just using the command appended with "--help". F
 At the moment, this help consists only of clarification of syntax. We intend to provide more explanation via this command in the future.
 
 At the moment, we have the following commands:
-- $find_dual: Finds the dual land that enter the battlefield untapped with given one or two land types. If only one is chosen, it returns the four respective dual lands. If two are chosen, it returns just the one.
+- $find_dual: Finds the dual land(s) that enter the battlefield untapped given one or two land types. If only one is chosen, it returns the four respective dual lands. If two are chosen, it returns just the one.
 
     Syntax Examples:
 
